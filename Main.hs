@@ -91,12 +91,3 @@ main = do
     str <- LBS.readFile $ head args
     res <- mapVersions (devDeps (decode str :: Maybe Dependencies))
     mapM_ tellOutdated res
-
--- TESTS
-testDeps = "{\"name\" : \"something\", \"devDependencies\" :{\"lodash\": \"3.4.1\", \"lodash-node\" : \"0.2.1\"}}"
-testFile = "package.json"
-testP = devDeps (decode testDeps :: Maybe Dependencies)
-
-test = case testP of
-        (Just x) -> mapM checkVersion x
-        Nothing -> return []
