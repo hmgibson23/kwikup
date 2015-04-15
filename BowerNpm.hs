@@ -5,7 +5,8 @@ module BowerNpm where
 
 import Data.Aeson
 import Data.Functor
-import qualified Data.Attoparsec.Text as A
+import Control.Applicative
+import qualified Data.Attoparsec.ByteString.Char8 as A
 import Data.Attoparsec.Text (Parser)
 import Data.String.Utils (rstrip)
 import Data.List.Split (splitOn)
@@ -32,6 +33,22 @@ newtype Dependency = Dependency (Map String String)
 
 instance FromJSON Dependency where
   parseJSON val = Dependency <$> parseJSON val
+
+
+data Mversion = Mversion Int Int Int deriving (Show)
+
+--mversion :: Parser Mversion
+mversion = do
+  major <- A.decimal
+  A.char '.'
+  minor <- A.decimal
+  A.char '.'
+  patch <- A.decimal
+  return $ Mversion major minor patch
+
+isMversion x = case A.parseOnly mversion (BS.pack x) of
+  (Right a) -> True
+  _ ->  False
 
 dep :: Dependency -> Map String String
 dep (Dependency x) = x
@@ -70,9 +87,8 @@ prepareString = stripped
 
 -- TODO: isMVersion is crude and unwieldy
 compareMVersions :: String -> String -> Bool
-compareMVersions x y = isMVersion x && listCompare (l x) (l y)
+compareMVersions x y = isMversion x && listCompare (l x) (l y)
   where l = splitOn "."
-        isMVersion p = length (l p) > 2
 
 -- HEINOUS - There must be a better way but I can't
 -- be bothered to think about it now
