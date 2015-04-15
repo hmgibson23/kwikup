@@ -98,7 +98,6 @@ prepareString = stripped
         version res = head (tail (BS.split '\n' (snd (BS.breakSubstring "Available versions"
                                                         (BS.pack res)))))
 
--- TODO: isMVersion is crude and unwieldy
 compareMVersions :: String -> String -> Bool
 compareMVersions x y = isMversion x && l < p
   where l = parseMversion x
