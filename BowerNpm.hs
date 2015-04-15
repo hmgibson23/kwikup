@@ -35,7 +35,17 @@ instance FromJSON Dependency where
   parseJSON val = Dependency <$> parseJSON val
 
 
-data Mversion = Mversion Int Int Int deriving (Show)
+data Mversion = Mversion {
+  major :: Integer,
+  minor :: Integer,
+  patch :: Integer
+  } deriving (Show)
+
+instance Eq Mversion where
+  a == b = (major a == major b) && (minor a == minor b) && (patch a == patch b)
+
+instance Ord Mversion where
+  a < b = (major a < major b) || (minor a < minor b) || (patch a < patch b)
 
 --mversion :: Parser Mversion
 mversion = do
@@ -46,7 +56,10 @@ mversion = do
   patch <- A.decimal
   return $ Mversion major minor patch
 
-isMversion x = case A.parseOnly mversion (BS.pack x) of
+parseMversion x = A.parseOnly mversion (BS.pack x)
+
+isMversion :: String -> Bool
+isMversion x = case parseMversion x of
   (Right a) -> True
   _ ->  False
 
@@ -87,20 +100,9 @@ prepareString = stripped
 
 -- TODO: isMVersion is crude and unwieldy
 compareMVersions :: String -> String -> Bool
-compareMVersions x y = isMversion x && listCompare (l x) (l y)
-  where l = splitOn "."
-
--- HEINOUS - There must be a better way but I can't
--- be bothered to think about it now
-listCompare :: [String] -> [String] -> Bool
-listCompare x y = let h = head x
-                      j = head y
-                      k = x !! 1
-                      l = y !! 1
-                      m = x !! 2
-                      n = y !! 2
-                  in ((x < y) || (k < l) || (m < n))
-
+compareMVersions x y = isMversion x && l < p
+  where l = parseMversion x
+        p = parseMversion y
 
 -- Note this could be simplified by chaining monads
 checkVersion :: Monad m => (t, String) -> (t -> m (Maybe String)) -> m (Maybe (t, String))
@@ -128,9 +130,3 @@ bowerNodeMap x fileName = mapVersions j fileName
           ds <- deps x devDependencies
           ps <- deps x dependencies
           return (ds ++ ps)
-
-
--- Need to short circuit on a failure
-m a b = map check z
-  where z = zip a b
-        check p = uncurry (<) p
