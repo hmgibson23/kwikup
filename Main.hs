@@ -20,5 +20,5 @@ main = do
     putStrLn "Must supply a package file"
     else do
     str <- LBS.readFile $ head args
-    res <- mapVersions (devDeps (decode str :: Maybe Dependencies))
+    res <- bowerNodeMap (decode str :: Maybe Dependencies) (head args)
     mapM_ tellOutdated res
