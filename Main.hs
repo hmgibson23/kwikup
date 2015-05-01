@@ -1,12 +1,9 @@
-{-# LANGUAGE OverloadedStrings #-}
-
 module Main where
 
 import Data.Aeson
 import System.Environment
 import qualified Data.ByteString.Lazy as LBS
 import BowerNpm
-
 
 tellOutdated :: Maybe (String, String) -> IO ()
 tellOutdated x = case x of

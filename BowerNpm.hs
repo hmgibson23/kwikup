@@ -3,21 +3,19 @@
 
 module BowerNpm where
 
-import Data.Aeson
-import Data.Functor
-import Control.Applicative
+import           Control.Applicative
+import           Data.Aeson
 import qualified Data.Attoparsec.ByteString.Char8 as A
-import Data.Attoparsec.Text (Parser)
-import Data.String.Utils (rstrip)
-import Data.List.Split (splitOn)
-import Data.List (isInfixOf)
-import Data.Char (isSpace)
-import System.Process
-import Control.Monad
+import           Data.Attoparsec.Internal.Types (Parser)
 import qualified Data.ByteString.Char8 as BS
-import GHC.Generics
-import GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
-import Data.Map (Map, (!), toList)
+import           Data.Char (isSpace)
+import           Data.List (isInfixOf)
+import           Data.Map (Map, toList)
+import           Data.String.Utils (rstrip)
+import           GHC.Generics
+import           GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
+import           System.Process
+
 
 data Dependencies =
   Dependencies {
@@ -46,8 +44,10 @@ instance Eq Mversion where
 
 instance Ord Mversion where
   a < b = (major a < major b) || (minor a < minor b) || (patch a < patch b)
+  a <= b = a == b || a < b
 
 --mversion :: Parser Mversion
+mversion :: Data.Attoparsec.Internal.Types.Parser BS.ByteString Mversion
 mversion = do
   major <- A.decimal
   A.char '.'
@@ -56,11 +56,12 @@ mversion = do
   patch <- A.decimal
   return $ Mversion major minor patch
 
+parseMversion :: String -> Either String Mversion
 parseMversion x = A.parseOnly mversion (BS.pack x)
 
 isMversion :: String -> Bool
 isMversion x = case parseMversion x of
-  (Right a) -> True
+  (Right _) -> True
   _ ->  False
 
 dep :: Dependency -> Map String String
@@ -113,17 +114,18 @@ checkVersion y f = do
             else return Nothing
    _ -> return Nothing
 
+
+-- could use mapConcurrently here to get things to work
 mapVersions :: Maybe [(String, String)] -> String -> IO [Maybe (String, String)]
 mapVersions a fileName = case a of
-  (Just a) -> if "bower" `isInfixOf` fileName then
-               mapM (`checkVersion` getVersion bowerCommand) a
+  (Just x) -> if "bower" `isInfixOf` fileName then
+               mapM (`checkVersion` getVersion bowerCommand) x
              else
-               mapM (`checkVersion` getVersion nodeCommand) a
+               mapM (`checkVersion` getVersion nodeCommand) x
   Nothing -> return []
 
 
--- TODO: Sould probably not just join all the dependencies together as it might be
--- nicer to know where each one is missing
+bowerNodeMap :: Maybe Dependencies -> String -> IO [Maybe (String, String)]
 bowerNodeMap x fileName = mapVersions j fileName
   where j = do
           ds <- deps x devDependencies
